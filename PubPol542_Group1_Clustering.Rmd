@@ -1,0 +1,238 @@
+---
+title: "PubPol 542: Group 1 Clustering"
+output: github_document
+---
+
+### Set up R session
+
+1. First, we need to clean the data environment.
+
+```{r}
+
+## Clean data environment  
+  rm(list=ls()) 
+
+```
+
+2. Next, we need to load our data from github. 
+
+```{r}
+  
+## Loading data
+  dat <- readRDS(gzcon(url("https://github.com/PUBPOL-542-Group-1-Project/Merging-Dataframes/raw/main/datafiles/finaldata.RDS")))
+  
+```
+
+
+### Preparing the Data
+
+We need to explore the variables we will use for clustering. 
+
+1. We can create a subset of the full data set that includes just the variables of interest ("Graduate", "White", "Expenditure"). 
+
+```{r}
+
+## Subset the full dataset with variables of interest
+  dfClus=dat[,c('Graduate','White','Expenditure')]
+
+```
+
+2. Let's look at the summary statistics of these variables (minimum, median, mean, maximum, etc.).
+
+```{r}
+
+## Explore Variables
+  summary(dfClus)
+
+```
+
+Next, we need to rescale the units if needed into a new variable so our data is standardized.
+
+1. Let's rescale the variables of interest (using the subset of the dataset created earlier).
+
+```{r}
+
+## Rescale Variables
+  dfClus=scale(dfClus)
+
+```
+
+2. Now, let's look at the summary statistics of these variables again to see if this changed anything.
+
+```{r}
+
+## Explore Variables
+  summary(dfClus)
+
+```
+
+Now, we need to rename subset indexes to the School names.
+
+```{r}
+
+## Rename subset indexes to the school names
+  row.names(dfClus)=dat$SchoolName
+
+```
+
+Let's verify that this worked by looking at the first 12 rows of our subsetted data.
+
+```{r}
+
+## Verify input
+  head(dfClus)
+
+```
+
+Now, let's set a random seed for replicability of our results.
+
+```{r}
+
+## Set random seed
+  set.seed(123) # this is for replicability of results
+
+```
+
+Next, we need to decide on the distance method and compute the distance matrix. A distance matrix is a table that shows the distance between pairs of objects.
+
+1. To do this, we need to use the cluster package in R.
+
+```{r}
+
+## Load the cluster package 
+  library(cluster)
+
+```
+
+2. Before we compute the distance matrix, we need to remove duplicated rows (duplicated School Names).
+
+```{r}
+
+## Remove duplicated elements
+  rownames(dfClus) <- c()
+
+```
+
+3. Now, we can compute the distance matrix on our subsetted data. 
+
+```{r}
+
+## Compute the distance matrix
+  dfClus_D=cluster::daisy(x=dfClus)
+
+```
+
+
+### Hierarchizing: Divisive
+
+We will be using the divisive hierarchical clustering technique. In using the hierarchizing technique, we will be asking the algorithm to find all possible ways cases can be clustered, individually and in subgroups following a tree-construction/deconstruction approach. The divisive hierarchical clustering technique uses a top-down approach. Initially, all the points in the dataset belong to one cluster. Then, we partition the cluster into two least similar clusters. Finally, we proceed reecursively to from new clusters until the desired number of clusters are obtained.
+
+## 1. Applying the function
+
+1.1. To do this, we need to use the cluster package in R. we will load the ggplot2 package first, as this is required before uploading the factoextra package.
+
+```{r}
+
+## Load the ggplot2 and factoextra packages
+  library(ggplot2)
+  library(factoextra)
+
+```
+
+1.2. Now, we need to indicate the amount of clusters that are required. We will use 4 in this case. 
+
+```{r}
+
+## Indicating the number of clusters required
+  NumCluster=4
+
+```
+
+1.3. Finally, we can apply the function. We will have to indicate that we are using the subsetted data, indicate that 4 clusters are required, indicate the function ("diana"), and indicate the method ("ward.D").
+
+```{r}
+
+## Apply the function
+  res.diana = hcut(dfClus_D, 
+                k = NumCluster,
+                hc_func="diana",
+                hc_method = "ward.D")
+
+```
+
+
+## 2. Clustering Results
+
+2.1. To do this, we need to add results to the original data frame as a factor variable.
+
+```{r}
+
+## Add results to original dataframe
+  dat$dia=as.factor(res.diana$cluster)
+
+```
+
+2.2. Let's check the data frame to see if this worked.
+
+```{r}
+
+## Query dataframe
+  dat[dat$dia==1,'SchoolName']
+  dat[dat$SchoolName=="Homelink River",'dia']
+
+```
+
+2.3. Now, we can make a table of the 4 clusters to tell us how many observations are in each cluster.
+
+```{r}
+
+## REPORT: Table of clusters
+  table(dat$dia)
+
+```
+
+
+## 3. Evaluate Results
+
+3.1. To evaluate the results, let's look at a dendrogram. This is a diagram the illustrates the arrangement of clusters.
+
+```{r}
+
+## REPORT: Dendogram
+  fviz_dend(res.diana, k=NumCluster, cex = 0.7, horiz = T)
+
+```
+
+3.2. Now, let's look at the average silhouette of observations. The average silhouette approach measures the quality of a clustering. That is, it determines how well each object lies within its cluster. A high average silhouette width indicates a good clustering. The average silhouette method computes the average silhouette of observations for different values of k.
+
+```{r}
+
+## REPORT: Average silhouettes
+  fviz_silhouette(res.diana)
+
+```
+
+With an average silhouette scoree of 0.56, this seems reasonable. 
+
+3.3. Now, let's try to detect any anomalies in our analysis (any negative silhouettes). 
+
+First, we need to save the silhouettes as a dataframe (diaEval) and check if this worked by calling the first 6 rows in that dataframe.
+
+```{r}
+
+## REPORT: Detecting anomalies
+  diaEval = data.frame(res.diana$silinfo$widths) # saving silhouettes
+  head(diaEval)
+
+```
+
+Now, let's look the anomalies (negative silhoueettes)
+
+```{r}
+
+## Requesting negative silhouettes  
+  diaEval[diaEval$sil_width<0,] 
+
+```
+
+There are 15 rows with negative silhouettes, which is okay.
