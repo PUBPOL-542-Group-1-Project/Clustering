@@ -1,259 +1,171 @@
-PubPol542\_Clustering
+PubPol542: Group 1 Clustering
 ================
 
-``` r
-  rm(list=ls()) ## clean data environment
+### Set up R session
 
-  options(digits = 3) ## formats output to 3 digits
-  set.seed(1) ## set seed for any randomization that may follow
-  
+1.  First, we need to clean the data environment.
+
+<!-- end list -->
+
+``` r
+## Clean data environment  
+  rm(list=ls()) 
+```
+
+2.  Next, we need to load our data from github.
+
+<!-- end list -->
+
+``` r
 ## Loading data
   dat <- readRDS(gzcon(url("https://github.com/PUBPOL-542-Group-1-Project/Merging-Dataframes/raw/main/datafiles/finaldata.RDS")))
 ```
 
-### Preparing Data
+### Preparing the Data
+
+We need to explore the variables we will use for clustering.
+
+1.  We can create a subset of the full data set that includes just the
+    variables of interest (“Graduate”, “White”, “Expenditure”).
+
+<!-- end list -->
+
+``` r
+## Subset the full dataset with variables of interest
+  dfClus=dat[,c('Graduate','White','Expenditure')]
+```
+
+2.  Let’s look at the summary statistics of these variables (minimum,
+    median, mean, maximum, etc.).
+
+<!-- end list -->
 
 ``` r
 ## Explore Variables
-  dfClus=dat[,c('Graduate','White','Expenditure')]
   summary(dfClus)
 ```
 
-    ##     Graduate       White      Expenditure      
-    ##  Min.   :  0   Min.   :  0   Min.   :   12229  
-    ##  1st Qu.: 22   1st Qu.: 22   1st Qu.: 2758407  
-    ##  Median : 92   Median : 69   Median : 6621264  
-    ##  Mean   :158   Mean   :112   Mean   :10444077  
-    ##  3rd Qu.:280   3rd Qu.:174   3rd Qu.:18851846  
-    ##  Max.   :581   Max.   :556   Max.   :36481816
+    ##     Graduate         White        Expenditure      
+    ##  Min.   :  0.0   Min.   :  0.0   Min.   :   12229  
+    ##  1st Qu.: 21.5   1st Qu.: 21.5   1st Qu.: 2758407  
+    ##  Median : 92.0   Median : 69.0   Median : 6621264  
+    ##  Mean   :157.7   Mean   :111.6   Mean   :10444077  
+    ##  3rd Qu.:280.0   3rd Qu.:174.5   3rd Qu.:18851846  
+    ##  Max.   :581.0   Max.   :556.0   Max.   :36481816
+
+Next, we need to rescale the units if needed into a new variable so our
+data is standardized.
+
+1.  Let’s rescale the variables of interest (using the subset of the
+    dataset created earlier).
+
+<!-- end list -->
 
 ``` r
 ## Rescale Variables
   dfClus=scale(dfClus)
+```
+
+2.  Now, let’s look at the summary statistics of these variables again
+    to see if this changed anything.
+
+<!-- end list -->
+
+``` r
+## Explore Variables
   summary(dfClus)
 ```
 
-    ##     Graduate          White        Expenditure    
-    ##  Min.   :-1.036   Min.   :-1.01   Min.   :-1.184  
-    ##  1st Qu.:-0.895   1st Qu.:-0.82   1st Qu.:-0.872  
-    ##  Median :-0.432   Median :-0.39   Median :-0.434  
-    ##  Mean   : 0.000   Mean   : 0.00   Mean   : 0.000  
-    ##  3rd Qu.: 0.804   3rd Qu.: 0.57   3rd Qu.: 0.954  
-    ##  Max.   : 2.782   Max.   : 4.04   Max.   : 2.956
+    ##     Graduate           White          Expenditure     
+    ##  Min.   :-1.0362   Min.   :-1.0143   Min.   :-1.1842  
+    ##  1st Qu.:-0.8949   1st Qu.:-0.8189   1st Qu.:-0.8725  
+    ##  Median :-0.4317   Median :-0.3871   Median :-0.4340  
+    ##  Mean   : 0.0000   Mean   : 0.0000   Mean   : 0.0000  
+    ##  3rd Qu.: 0.8037   3rd Qu.: 0.5720   3rd Qu.: 0.9544  
+    ##  Max.   : 2.7815   Max.   : 4.0401   Max.   : 2.9558
+
+Now, we need to rename subset indexes to the School names.
 
 ``` r
-## Rename subset indices
+## Rename subset indexes to the school names
   row.names(dfClus)=dat$SchoolName
+```
+
+Let’s verify that this worked by looking at the first 12 rows of our
+subsetted data.
+
+``` r
+## Verify input
   head(dfClus)
 ```
 
-    ##                            Graduate  White Expenditure
-    ## Harbor High School          -0.9442 -0.742     -0.9858
-    ## J M Weatherwax High School   0.0217  0.131      0.4273
-    ## Anacortes High School        0.0217  0.286      0.0854
-    ## Cap Sante High School       -0.9376 -0.705     -1.1073
-    ## Arlington High School        1.3622  1.940      1.2177
-    ## Weston High School          -0.9048 -0.614     -0.8630
+    ##                               Graduate      White Expenditure
+    ## Harbor High School         -0.94418579 -0.7416205 -0.98578736
+    ## J M Weatherwax High School  0.02173945  0.1310804  0.42725339
+    ## Anacortes High School       0.02173945  0.2856212  0.08537848
+    ## Cap Sante High School      -0.93761487 -0.7052580 -1.10725081
+    ## Arlington High School       1.36220714  1.9401166  1.21768095
+    ## Weston High School         -0.90476027 -0.6143516 -0.86297020
+
+Now, let’s set a random seed for replicability of our results.
 
 ``` r
 ## Set random seed
   set.seed(123) # this is for replicability of results
-  
-## Compute Distance Matrix
+```
+
+Next, we need to decide on the distance method and compute the distance
+matrix. A distance matrix is a table that shows the distance between
+pairs of objects.
+
+1.  To do this, we need to use the cluster package in R.
+
+<!-- end list -->
+
+``` r
+## Load the cluster package 
   library(cluster)
+```
+
+2.  Before we compute the distance matrix, we need to remove duplicated
+    rows (duplicated School Names).
+
+<!-- end list -->
+
+``` r
+## Remove duplicated elements
+  rownames(dfClus) <- c()
+```
+
+3.  Now, we can compute the distance matrix on our subsetted data.
+
+<!-- end list -->
+
+``` r
+## Compute the distance matrix
   dfClus_D=cluster::daisy(x=dfClus)
 ```
 
-### Partitioning Technique
+### Hierarchizing: Divisive
+
+We will be using the divisive hierarchical clustering technique. In
+using the hierarchizing technique, we will be asking the algorithm to
+find all possible ways cases can be clustered, individually and in
+subgroups following a tree-construction/deconstruction approach. The
+divisive hierarchical clustering technique uses a top-down approach.
+Initially, all the points in the dataset belong to one cluster. Then, we
+partition the cluster into two least similar clusters. Finally, we
+proceed reecursively to from new clusters until the desired number of
+clusters are obtained.
+
+## 1\. Applying the function
+
+1.1. To do this, we need to use the cluster package in R. we will load
+the ggplot2 package first, as this is required before uploading the
+factoextra package.
 
 ``` r
-#### APPLY FUNCTION ####
-
-## Indicating the number of clusters required
-  NumCluster=4
-  res.pam = pam(x=dfClus_D,
-              k = NumCluster,
-              cluster.only = F)
-  
-#### CLUSTERING RESULTS ####
-  
-## Add results to the orginal dataframe
-  dat$pam=as.factor(res.pam$clustering)
-  
-## Query dataframe
-  dat[dat$pam==1,'SchoolName']
-```
-
-    ##   [1] "Harbor High School"                                               
-    ##   [2] "Cap Sante High School"                                            
-    ##   [3] "Weston High School"                                               
-    ##   [4] "West Auburn Senior High School"                                   
-    ##   [5] "Eagle Harbor High School"                                         
-    ##   [6] "Options High School"                                              
-    ##   [7] "Renaissance Alternative High School"                              
-    ##   [8] "Bridgeport High School"                                           
-    ##   [9] "Burlington-Edison Alternative School"                             
-    ##  [10] "Hayes Freedom High School"                                        
-    ##  [11] "CVSD Open Doors Programs"                                         
-    ##  [12] "Futurus High School"                                              
-    ##  [13] "Lewis County Alternative School"                                  
-    ##  [14] "Cheney Open Doors"                                                
-    ##  [15] "Three Springs High School"                                        
-    ##  [16] "Quartzite Learning"                                               
-    ##  [17] "Chief Leschi Schools"                                             
-    ##  [18] "Educational Opportunity Center"                                   
-    ##  [19] "Cle Elum Roslyn High School"                                      
-    ##  [20] "Swiftwater Alternative High School"                               
-    ##  [21] "CPSD Open Doors Program"                                          
-    ##  [22] "Oakridge Group Home"                                              
-    ##  [23] "Colfax High School"                                               
-    ##  [24] "Columbia High School"                                             
-    ##  [25] "Panorama School"                                                  
-    ##  [26] "Concrete High School"                                             
-    ##  [27] "Twin Cedars High School"                                          
-    ##  [28] "Crescent School"                                                  
-    ##  [29] "Curlew Elem & High School"                                        
-    ##  [30] "Cusick Jr Sr High School"                                         
-    ##  [31] "Darrington High School"                                           
-    ##  [32] "Dayton High School"                                               
-    ##  [33] "EV Online"                                                        
-    ##  [34] "EV Parent Partnership"                                            
-    ##  [35] "Edmonds eLearning Academy"                                        
-    ##  [36] "K-12 Ellensburg Learning Center"                                  
-    ##  [37] "Entiat Middle and High School"                                    
-    ##  [38] "Everett Reengagement Academy"                                     
-    ##  [39] "Port Gardner"                                                     
-    ##  [40] "Career Academy at Truman High School"                             
-    ##  [41] "Internet Academy"                                                 
-    ##  [42] "Open Doors Youth Reengagement (1418)"                             
-    ##  [43] "River View High School"                                           
-    ##  [44] "Gates Secondary School"                                           
-    ##  [45] "Garfield at Palouse High School"                                  
-    ##  [46] "Lake Roosevelt Alternative School"                                
-    ##  [47] "Contract Learning Center"                                         
-    ##  [48] "Crossroads High School"                                           
-    ##  [49] "New Start"                                                        
-    ##  [50] "Inchelium High School"                                            
-    ##  [51] "Gibson Ek High School"                                            
-    ##  [52] "Loowit High School"                                               
-    ##  [53] "Mid-Columbia Parent Partnership"                                  
-    ##  [54] "Phoenix High School"                                              
-    ##  [55] "Kent Phoenix Academy"                                             
-    ##  [56] "Columbia Virtual Academy - Kettle Falls"                          
-    ##  [57] "Kettle Falls High School"                                         
-    ##  [58] "Kittitas High School"                                             
-    ##  [59] "La Conner High School"                                            
-    ##  [60] "Emerson High School"                                              
-    ##  [61] "Futures School"                                                   
-    ##  [62] "Lind-Ritzville High School"                                       
-    ##  [63] "Discovery High School"                                            
-    ##  [64] "Lopez Middle High School"                                         
-    ##  [65] "Lummi Nation School"                                              
-    ##  [66] "Lyle High School"                                                 
-    ##  [67] "Mabton Jr. Sr. High"                                              
-    ##  [68] "Manson High School"                                               
-    ##  [69] "Mary M. Knight School"                                            
-    ##  [70] "Mary Walker High School"                                          
-    ##  [71] "Heritage School"                                                  
-    ##  [72] "Mead Alternative High School (Closed after 2018-2019 school year)"
-    ##  [73] "Medical Lake Endeavors"                                           
-    ##  [74] "Leaders In Learning"                                              
-    ##  [75] "Morton Junior-Senior High"                                        
-    ##  [76] "Skill Source Reingagement Program"                                
-    ##  [77] "White Swan High School"                                           
-    ##  [78] "Skagit Academy"                                                   
-    ##  [79] "Muckleshoot Tribal School"                                        
-    ##  [80] "ACES High School"                                                 
-    ##  [81] "Mukilteo Reengagement Academy Open Doors"                         
-    ##  [82] "Pend Oreille River School"                                        
-    ##  [83] "North Beach Senior High School"                                   
-    ##  [84] "Palouse Junction High School"                                     
-    ##  [85] "James A. Taylor High School"                                      
-    ##  [86] "Northport High School"                                            
-    ##  [87] "Northshore Networks"                                              
-    ##  [88] "Northshore Online Reengagement Program"                           
-    ##  [89] "Secondary Academy for Success"                                    
-    ##  [90] "Oakville High School"                                             
-    ##  [91] "Odessa High School"                                               
-    ##  [92] "Okanogan Alternative High School"                                 
-    ##  [93] "Okanogan Outreach Alternative School"                             
-    ##  [94] "Avanti High School"                                               
-    ##  [95] "Olympia Regional Learning Academy"                                
-    ##  [96] "Orcas Island High School"                                         
-    ##  [97] "Oroville Middle-High School"                                      
-    ##  [98] "Desert Oasis High School"                                         
-    ##  [99] "New Horizons High School"                                         
-    ## [100] "Pe Ell School"                                                    
-    ## [101] "Henderson Bay Alt High School"                                    
-    ## [102] "Lincoln High School"                                              
-    ## [103] "E B Walker High School"                                           
-    ## [104] "Puyallup Online Academy/POA"                                      
-    ## [105] "Quincy Innovation Academy"                                        
-    ## [106] "Republic Senior High School"                                      
-    ## [107] "Three Rivers Home Link"                                           
-    ## [108] "Ritzville High School"                                            
-    ## [109] "CLIP"                                                             
-    ## [110] "H.e.a.r.t. High School"                                           
-    ## [111] "Alan T. Sugiyama High School"                                     
-    ## [112] "Middle College High School"                                       
-    ## [113] "Seattle World School"                                             
-    ## [114] "The Center School"                                                
-    ## [115] "Selah Academy Online"                                             
-    ## [116] "Two Rivers School"                                                
-    ## [117] "Soap Lake Middle & High School"                                   
-    ## [118] "South Bend High School"                                           
-    ## [119] "Explorer Academy"                                                 
-    ## [120] "South Whidbey Academy"                                            
-    ## [121] "Pratt Academy"                                                    
-    ## [122] "Lincoln Hill High School"                                         
-    ## [123] "Summit Public School: Olympus"                                    
-    ## [124] "Chief Kitsap Academy"                                             
-    ## [125] "Oakland High School"                                              
-    ## [126] "Taholah High School"                                              
-    ## [127] "Tekoa High School"                                                
-    ## [128] "Cowlitz Prairie Academy"                                          
-    ## [129] "Computer Academy Toppenish High School"                           
-    ## [130] "Cascadia High School"                                             
-    ## [131] "New Market High School"                                           
-    ## [132] "Paideia High School"                                              
-    ## [133] "Student Link"                                                     
-    ## [134] "Wahkiakum High School"                                            
-    ## [135] "Sentinel Tech Alt School"                                         
-    ## [136] "Walla Walla Open Doors"                                           
-    ## [137] "Pace Alternative High School"                                     
-    ## [138] "Warden High School"                                               
-    ## [139] "Wellpinit Fort Simcoe SEA"                                        
-    ## [140] "Wellpinit High School"                                            
-    ## [141] "Spokane Valley Transition School"                                 
-    ## [142] "WEST VALLEY VIRTUAL ACADEMY 9-12"                                 
-    ## [143] "White Pass Jr. Sr. High School"                                   
-    ## [144] "White Salmon Academy"                                             
-    ## [145] "Winolequa Learning Academy"                                       
-    ## [146] "Woodland Alternative School"                                      
-    ## [147] "Stanton Academy"                                                  
-    ## [148] "Yakima Online"                                                    
-    ## [149] "Yelm Extension School"
-
-``` r
-  dat[dat$SchoolName=="Homelink River",'pam']
-```
-
-    ## [1] 3
-    ## Levels: 1 2 3 4
-
-``` r
-## REPORT: Table of clusters
-  table(dat$pam)
-```
-
-    ## 
-    ##   1   2   3   4 
-    ## 149 101 103  62
-
-``` r
-#### EVALUATE RESULTS ####
-
-## Loading required packages  
+## Load the ggplot2 and factoextra packages
   library(ggplot2)
 ```
 
@@ -267,411 +179,39 @@ PubPol542\_Clustering
 
     ## Welcome! Want to learn more? See two factoextra-related books at https://goo.gl/ve3WBa
 
-``` r
-## Cluster silhouette plot
-  fviz_silhouette(res.pam)
-```
-
-    ##   cluster size ave.sil.width
-    ## 1       1  149          0.67
-    ## 2       2  101          0.34
-    ## 3       3  103          0.13
-    ## 4       4   62          0.38
-
-![](PubPol542_Group1_Clustering_files/figure-gfm/Partioning%20Technique-1.png)<!-- -->
+1.2. Now, we need to indicate the amount of clusters that are required.
+We will use 4 in this case.
 
 ``` r
-## Save individual silhouettes
-  pamEval=data.frame(res.pam$silinfo$widths)
-  head(pamEval)
-```
-
-    ##                             cluster neighbor sil_width
-    ## Republic.Senior.High.School       1        3     0.783
-    ## Lyle.High.School                  1        3     0.783
-    ## South.Whidbey.Academy             1        3     0.782
-    ## Middle.College.High.School        1        3     0.781
-    ## Leaders.In.Learning               1        3     0.778
-    ## Northport.High.School             1        3     0.778
-
-``` r
-## Request negative silhouettes (the ones that are poorly clustered)
-  pamEval[pamEval$sil_width<0,]
-```
-
-    ##                                            cluster neighbor sil_width
-    ## East.Valley.High.School.1                        2        3   -0.0433
-    ## A.G.West.Black.Hills.High.School                 2        3   -0.1231
-    ## Pullman.High.School                              2        3   -0.1255
-    ## Westside.High.School                             3        1   -0.0275
-    ## State.Street.High.School                         3        1   -0.0406
-    ## Chimacum.Junior.Senior.High.School               3        1   -0.0488
-    ## Legacy.High.School                               3        1   -0.0559
-    ## Stevenson.High.School                            3        1   -0.0613
-    ## Northwest.Allprep                                3        1   -0.0675
-    ## Summit.Public.School..Sierra                     3        1   -0.0705
-    ## Coupeville.High.School                           3        1   -0.0728
-    ## Highline.Open.Doors.1418                         3        1   -0.0760
-    ## Toledo.High.School                               3        1   -0.0842
-    ## Granger.High.School                              3        1   -0.1093
-    ## Legacy.High.School.1                             3        1   -0.1147
-    ## Edmonds.Heights.K.12                             3        1   -0.1286
-    ## Napavine.Jr.Sr.High.School                       3        1   -0.1309
-    ## Rivers.Edge.High.School                          3        1   -0.1343
-    ## Acceleration.Academy                             3        1   -0.1593
-    ## Choice.Middle.and.High.School                    3        1   -0.1764
-    ## Tonasket.High.School                             3        1   -0.1769
-    ## Goldendale.High.School                           3        1   -0.1775
-    ## Sequoia.High.School                              3        1   -0.1786
-    ## Scriber.Lake.High.School                         3        1   -0.1990
-    ## Asotin.Jr.Sr.High                                3        1   -0.2060
-    ## Highland.High.School                             3        1   -0.2121
-    ## Individualized.Graduation...Degree.Program       3        1   -0.2185
-    ## South.Sound.High.School                          3        1   -0.2380
-    ## Friday.Harbor.High.School                        3        1   -0.2424
-    ## Rainier.Senior.High.School                       3        1   -0.2472
-    ## Ilwaco.High.School                               3        1   -0.2786
-    ## Ocosta.Junior...Senior.High                      3        1   -0.2799
-    ## Mica.Peak.High.School                            3        1   -0.3011
-    ## Discovery                                        3        1   -0.3012
-    ## Talley.High.School                               3        1   -0.3014
-    ## AIM.High.School                                  3        1   -0.3038
-    ## Legacy.High.School.2                             3        1   -0.3262
-    ## Davenport.Senior.High.School                     3        1   -0.3424
-    ## Southridge.High.School                           4        2   -0.0080
-    ## Enumclaw.Sr.High.School                          4        2   -0.0903
-
-### Hierarchizing: Agglomerative
-
-``` r
-#### APPLY FUNCTION ####
-
-## Remove duplicated elements
-  rownames(dfClus) <- c()
-  dfClus_D=cluster::daisy(x=dfClus)
-
 ## Indicating the number of clusters required
-  res.agnes = hcut(dfClus_D, 
-                k = NumCluster,isdiss=T,
-                hc_func="agnes",
-                hc_method = "ward.D2")
-  
-#### CLUSTERING RESULTS ####
-
-## Add results to original dataframe
-  dat$agn=as.factor(res.agnes$cluster)
-  
-## Query dataframe
-  dat[dat$agn==1,'SchoolName']
+  NumCluster=4
 ```
 
-    ##   [1] "Harbor High School"                                               
-    ##   [2] "Cap Sante High School"                                            
-    ##   [3] "Weston High School"                                               
-    ##   [4] "Asotin Jr Sr High"                                                
-    ##   [5] "West Auburn Senior High School"                                   
-    ##   [6] "Eagle Harbor High School"                                         
-    ##   [7] "Homelink River"                                                   
-    ##   [8] "Summit View High School"                                          
-    ##   [9] "Options High School"                                              
-    ##  [10] "Acceleration Academy"                                             
-    ##  [11] "Challenger High School"                                           
-    ##  [12] "Renaissance Alternative High School"                              
-    ##  [13] "Bridgeport High School"                                           
-    ##  [14] "Burlington-Edison Alternative School"                             
-    ##  [15] "Hayes Freedom High School"                                        
-    ##  [16] "Cascade High School"                                              
-    ##  [17] "CASHMERE HIGH SCHOOL"                                             
-    ##  [18] "Castle Rock High School"                                          
-    ##  [19] "Barker Creek Community School"                                    
-    ##  [20] "CVSD Open Doors Programs"                                         
-    ##  [21] "Mica Peak High School"                                            
-    ##  [22] "Futurus High School"                                              
-    ##  [23] "Lewis County Alternative School"                                  
-    ##  [24] "Cheney Open Doors"                                                
-    ##  [25] "Three Springs High School"                                        
-    ##  [26] "Quartzite Learning"                                               
-    ##  [27] "Chief Leschi Schools"                                             
-    ##  [28] "Chimacum Junior/Senior High School"                               
-    ##  [29] "Educational Opportunity Center"                                   
-    ##  [30] "Cle Elum Roslyn High School"                                      
-    ##  [31] "Swiftwater Alternative High School"                               
-    ##  [32] "CPSD Open Doors Program"                                          
-    ##  [33] "Oakridge Group Home"                                              
-    ##  [34] "Colfax High School"                                               
-    ##  [35] "College Place High School"                                        
-    ##  [36] "Columbia High School"                                             
-    ##  [37] "Panorama School"                                                  
-    ##  [38] "Concrete High School"                                             
-    ##  [39] "Twin Cedars High School"                                          
-    ##  [40] "Coupeville High School"                                           
-    ##  [41] "Crescent School"                                                  
-    ##  [42] "Curlew Elem & High School"                                        
-    ##  [43] "Cusick Jr Sr High School"                                         
-    ##  [44] "Darrington High School"                                           
-    ##  [45] "Davenport Senior High School"                                     
-    ##  [46] "Dayton High School"                                               
-    ##  [47] "EV Online"                                                        
-    ##  [48] "EV Parent Partnership"                                            
-    ##  [49] "Edmonds eLearning Academy"                                        
-    ##  [50] "Edmonds Heights K-12"                                             
-    ##  [51] "Scriber Lake High School"                                         
-    ##  [52] "K-12 Ellensburg Learning Center"                                  
-    ##  [53] "Elma High School"                                                 
-    ##  [54] "Entiat Middle and High School"                                    
-    ##  [55] "Everett Reengagement Academy"                                     
-    ##  [56] "Port Gardner"                                                     
-    ##  [57] "Sequoia High School"                                              
-    ##  [58] "Legacy High School"                                               
-    ##  [59] "Career Academy at Truman High School"                             
-    ##  [60] "Internet Academy"                                                 
-    ##  [61] "Open Doors Youth Reengagement (1418)"                             
-    ##  [62] "River View High School"                                           
-    ##  [63] "Gates Secondary School"                                           
-    ##  [64] "Garfield at Palouse High School"                                  
-    ##  [65] "Goldendale High School"                                           
-    ##  [66] "Lake Roosevelt Alternative School"                                
-    ##  [67] "Contract Learning Center"                                         
-    ##  [68] "Granger High School"                                              
-    ##  [69] "Crossroads High School"                                           
-    ##  [70] "Granite Falls High School"                                        
-    ##  [71] "Highland High School"                                             
-    ##  [72] "Highline Open Doors 1418"                                         
-    ##  [73] "New Start"                                                        
-    ##  [74] "Hoquiam High School"                                              
-    ##  [75] "Inchelium High School"                                            
-    ##  [76] "Gibson Ek High School"                                            
-    ##  [77] "Kalama High School"                                               
-    ##  [78] "Loowit High School"                                               
-    ##  [79] "Legacy High School"                                               
-    ##  [80] "Mid-Columbia Parent Partnership"                                  
-    ##  [81] "Phoenix High School"                                              
-    ##  [82] "Individualized Graduation & Degree Program"                       
-    ##  [83] "Kent Phoenix Academy"                                             
-    ##  [84] "Columbia Virtual Academy - Kettle Falls"                          
-    ##  [85] "Kettle Falls High School"                                         
-    ##  [86] "Kiona-Benton City High School"                                    
-    ##  [87] "Kittitas High School"                                             
-    ##  [88] "La Conner High School"                                            
-    ##  [89] "Chelan High School"                                               
-    ##  [90] "Emerson High School"                                              
-    ##  [91] "Futures School"                                                   
-    ##  [92] "Lind-Ritzville High School"                                       
-    ##  [93] "Discovery High School"                                            
-    ##  [94] "Lopez Middle High School"                                         
-    ##  [95] "Lummi Nation School"                                              
-    ##  [96] "Lyle High School"                                                 
-    ##  [97] "Mabton Jr. Sr. High"                                              
-    ##  [98] "Manson High School"                                               
-    ##  [99] "Mary M. Knight School"                                            
-    ## [100] "Mary Walker High School"                                          
-    ## [101] "Heritage School"                                                  
-    ## [102] "Legacy High School"                                               
-    ## [103] "Mead Alternative High School (Closed after 2018-2019 school year)"
-    ## [104] "Medical Lake Endeavors"                                           
-    ## [105] "Meridian High School"                                             
-    ## [106] "Leaders In Learning"                                              
-    ## [107] "Sky Valley Education Center"                                      
-    ## [108] "Montesano Jr-Sr High"                                             
-    ## [109] "Morton Junior-Senior High"                                        
-    ## [110] "Skill Source Reingagement Program"                                
-    ## [111] "White Swan High School"                                           
-    ## [112] "Skagit Academy"                                                   
-    ## [113] "Muckleshoot Tribal School"                                        
-    ## [114] "ACES High School"                                                 
-    ## [115] "Mukilteo Reengagement Academy Open Doors"                         
-    ## [116] "Naches Valley High School"                                        
-    ## [117] "Napavine Jr Sr High School"                                       
-    ## [118] "Newport High School"                                              
-    ## [119] "Pend Oreille River School"                                        
-    ## [120] "Lakeside High School"                                             
-    ## [121] "Nooksack Valley High School"                                      
-    ## [122] "North Beach Senior High School"                                   
-    ## [123] "Palouse Junction High School"                                     
-    ## [124] "James A. Taylor High School"                                      
-    ## [125] "South Sound High School"                                          
-    ## [126] "Northport High School"                                            
-    ## [127] "Northshore Networks"                                              
-    ## [128] "Northshore Online Reengagement Program"                           
-    ## [129] "Secondary Academy for Success"                                    
-    ## [130] "Oakville High School"                                             
-    ## [131] "Ilwaco High School"                                               
-    ## [132] "Ocosta Junior - Senior High"                                      
-    ## [133] "Odessa High School"                                               
-    ## [134] "Okanogan Alternative High School"                                 
-    ## [135] "Okanogan Outreach Alternative School"                             
-    ## [136] "Avanti High School"                                               
-    ## [137] "Olympia Regional Learning Academy"                                
-    ## [138] "Omak High School"                                                 
-    ## [139] "Orcas Island High School"                                         
-    ## [140] "Oroville Middle-High School"                                      
-    ## [141] "Desert Oasis High School"                                         
-    ## [142] "New Horizons High School"                                         
-    ## [143] "Pe Ell School"                                                    
-    ## [144] "Henderson Bay Alt High School"                                    
-    ## [145] "Lincoln High School"                                              
-    ## [146] "Port Townsend High School"                                        
-    ## [147] "E B Walker High School"                                           
-    ## [148] "Puyallup Online Academy/POA"                                      
-    ## [149] "Forks High School"                                                
-    ## [150] "Quincy Innovation Academy"                                        
-    ## [151] "Rainier Senior High School"                                       
-    ## [152] "Talley High School"                                               
-    ## [153] "Republic Senior High School"                                      
-    ## [154] "Rivers Edge High School"                                          
-    ## [155] "Three Rivers Home Link"                                           
-    ## [156] "Ritzville High School"                                            
-    ## [157] "Riverside High School"                                            
-    ## [158] "CLIP"                                                             
-    ## [159] "H.e.a.r.t. High School"                                           
-    ## [160] "Royal High School"                                                
-    ## [161] "Friday Harbor High School"                                        
-    ## [162] "Alan T. Sugiyama High School"                                     
-    ## [163] "Interagency Programs"                                             
-    ## [164] "Middle College High School"                                       
-    ## [165] "Nova High School"                                                 
-    ## [166] "Seattle World School"                                             
-    ## [167] "The Center School"                                                
-    ## [168] "State Street High School"                                         
-    ## [169] "Selah Academy Online"                                             
-    ## [170] "Choice Middle and High School"                                    
-    ## [171] "AIM High School"                                                  
-    ## [172] "Two Rivers School"                                                
-    ## [173] "Soap Lake Middle & High School"                                   
-    ## [174] "South Bend High School"                                           
-    ## [175] "Discovery"                                                        
-    ## [176] "Explorer Academy"                                                 
-    ## [177] "South Whidbey Academy"                                            
-    ## [178] "South Whidbey High School"                                        
-    ## [179] "Pratt Academy"                                                    
-    ## [180] "Lincoln Hill High School"                                         
-    ## [181] "Stevenson High School"                                            
-    ## [182] "Sultan Senior High School"                                        
-    ## [183] "Summit Public School: Olympus"                                    
-    ## [184] "Summit Public School: Sierra"                                     
-    ## [185] "Chief Kitsap Academy"                                             
-    ## [186] "Oakland High School"                                              
-    ## [187] "Tacoma Open Doors"                                                
-    ## [188] "Taholah High School"                                              
-    ## [189] "Tekoa High School"                                                
-    ## [190] "Tenino High School"                                               
-    ## [191] "Cowlitz Prairie Academy"                                          
-    ## [192] "Toledo High School"                                               
-    ## [193] "Tonasket High School"                                             
-    ## [194] "Computer Academy Toppenish High School"                           
-    ## [195] "Northwest Allprep"                                                
-    ## [196] "Cascadia High School"                                             
-    ## [197] "New Market High School"                                           
-    ## [198] "Paideia High School"                                              
-    ## [199] "Student Link"                                                     
-    ## [200] "Vashon Island High School"                                        
-    ## [201] "Wahkiakum High School"                                            
-    ## [202] "Sentinel Tech Alt School"                                         
-    ## [203] "Walla Walla Open Doors"                                           
-    ## [204] "Pace Alternative High School"                                     
-    ## [205] "Warden High School"                                               
-    ## [206] "Wellpinit Fort Simcoe SEA"                                        
-    ## [207] "Wellpinit High School"                                            
-    ## [208] "Westside High School"                                             
-    ## [209] "Dishman Hills High School"                                        
-    ## [210] "Spokane Valley Transition School"                                 
-    ## [211] "WEST VALLEY VIRTUAL ACADEMY 9-12"                                 
-    ## [212] "White Pass Jr. Sr. High School"                                   
-    ## [213] "Columbia High School"                                             
-    ## [214] "White Salmon Academy"                                             
-    ## [215] "Winolequa Learning Academy"                                       
-    ## [216] "Woodland Alternative School"                                      
-    ## [217] "Stanton Academy"                                                  
-    ## [218] "Yakima Online"                                                    
-    ## [219] "Yelm Extension School"                                            
-    ## [220] "Zillah High School"
+1.3. Finally, we can apply the function. We will have to indicate that
+we are using the subsetted data, indicate that 4 clusters are required,
+indicate the function (“diana”), and indicate the method (“ward.D”).
 
 ``` r
-  dat[dat$SchoolName=="Homelink River",'agn']
-```
-
-    ## [1] 1
-    ## Levels: 1 2 3 4
-
-``` r
-## REPORT: Table of clusters
-  table(dat$agn)
-```
-
-    ## 
-    ##   1   2   3   4 
-    ## 220  73  39  83
-
-``` r
-#### EVALUATE RESULTS ####
-  
-## REPORT: Dendogram
-  fviz_dend(res.agnes,k=NumCluster, cex = 0.7, horiz = T)
-```
-
-![](PubPol542_Group1_Clustering_files/figure-gfm/Hierarchizing:%20Agglomerative-1.png)<!-- -->
-
-``` r
-## REPORT: Average silhouettes
-  fviz_silhouette(res.agnes)
-```
-
-    ##   cluster size ave.sil.width
-    ## 1       1  220          0.70
-    ## 2       2   73          0.30
-    ## 3       3   39          0.36
-    ## 4       4   83          0.31
-
-![](PubPol542_Group1_Clustering_files/figure-gfm/Hierarchizing:%20Agglomerative-2.png)<!-- -->
-
-``` r
-## REPORT: Detecting anomalies
-  agnEval = data.frame(res.agnes$silinfo$widths) # saving silhouettes
-  head(agnEval)
-```
-
-    ##     cluster neighbor sil_width
-    ## 332       1        2     0.811
-    ## 291       1        2     0.811
-    ## 81        1        2     0.810
-    ## 254       1        2     0.810
-    ## 154       1        2     0.809
-    ## 328       1        2     0.809
-
-``` r
-  agnEval[agnEval$sil_width<0,] # requesting negative silhouettes
-```
-
-    ##     cluster neighbor sil_width
-    ## 379       2        4   -0.0134
-    ## 198       2        1   -0.0189
-    ## 92        2        4   -0.0595
-    ## 30        2        4   -0.0608
-    ## 360       2        4   -0.1102
-    ## 386       2        1   -0.2090
-    ## 25        4        2   -0.0250
-    ## 392       4        2   -0.0365
-    ## 109       4        3   -0.0809
-    ## 318       4        2   -0.1629
-    ## 293       4        2   -0.1721
-    ## 96        4        2   -0.1817
-
-### Hierarchizing: Divisive
-
-``` r
-#### APPLY FUNCTION ####
-
-## Indicating the number of clusters required
+## Apply the function
   res.diana = hcut(dfClus_D, 
                 k = NumCluster,
                 hc_func="diana",
                 hc_method = "ward.D")
-  
-#### CLUSTERING RESULTS ####
+```
 
+## 2\. Clustering Results
+
+2.1. To do this, we need to add results to the original data frame as a
+factor variable.
+
+``` r
 ## Add results to original dataframe
   dat$dia=as.factor(res.diana$cluster)
-  
+```
+
+2.2. Let’s check the data frame to see if this worked.
+
+``` r
 ## Query dataframe
   dat[dat$dia==1,'SchoolName']
 ```
@@ -951,6 +491,9 @@ PubPol542\_Clustering
     ## [1] 1
     ## Levels: 1 2 3 4
 
+2.3. Now, we can make a table of the 4 clusters to tell us how many
+observations are in each cluster.
+
 ``` r
 ## REPORT: Table of clusters
   table(dat$dia)
@@ -960,14 +503,24 @@ PubPol542\_Clustering
     ##   1   2   3   4 
     ## 267  50  97   1
 
+## 3\. Evaluate Results
+
+3.1. To evaluate the results, let’s look at a dendrogram. This is a
+diagram the illustrates the arrangement of clusters.
+
 ``` r
-#### EVALUATE RESULTS ####
-  
 ## REPORT: Dendogram
-  fviz_dend(res.diana,k=NumCluster, cex = 0.7, horiz = T)
+  fviz_dend(res.diana, k=NumCluster, cex = 0.7, horiz = T)
 ```
 
-![](PubPol542_Group1_Clustering_files/figure-gfm/Hierarchizing:%20Divisive-1.png)<!-- -->
+![](PubPol542_Group1_Clustering_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
+
+3.2. Now, let’s look at the average silhouette of observations. The
+average silhouette approach measures the quality of a clustering. That
+is, it determines how well each object lies within its cluster. A high
+average silhouette width indicates a good clustering. The average
+silhouette method computes the average silhouette of observations for
+different values of k.
 
 ``` r
 ## REPORT: Average silhouettes
@@ -980,7 +533,15 @@ PubPol542\_Clustering
     ## 3       3   97          0.42
     ## 4       4    1          0.00
 
-![](PubPol542_Group1_Clustering_files/figure-gfm/Hierarchizing:%20Divisive-2.png)<!-- -->
+![](PubPol542_Group1_Clustering_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+
+With an average silhouette scoree of 0.56, this seems reasonable.
+
+3.3. Now, let’s try to detect any anomalies in our analysis (any
+negative silhouettes).
+
+First, we need to save the silhouettes as a dataframe (diaEval) and
+check if this worked by calling the first 6 rows in that dataframe.
 
 ``` r
 ## REPORT: Detecting anomalies
@@ -989,74 +550,35 @@ PubPol542\_Clustering
 ```
 
     ##     cluster neighbor sil_width
-    ## 81        1        3     0.804
-    ## 254       1        3     0.804
-    ## 189       1        3     0.804
-    ## 291       1        3     0.804
-    ## 384       1        3     0.804
-    ## 79        1        3     0.803
+    ## 81        1        3 0.8044321
+    ## 254       1        3 0.8042798
+    ## 189       1        3 0.8041018
+    ## 291       1        3 0.8035818
+    ## 384       1        3 0.8035799
+    ## 79        1        3 0.8034809
+
+Now, let’s look the anomalies (negative silhoueettes)
 
 ``` r
-  diaEval[diaEval$sil_width<0,] # requesting negative silhouettes
+## Requesting negative silhouettes  
+  diaEval[diaEval$sil_width<0,] 
 ```
 
-    ##     cluster neighbor sil_width
-    ## 270       1        3   -0.0286
-    ## 372       1        3   -0.0326
-    ## 86        1        3   -0.0989
-    ## 2         1        3   -0.1636
-    ## 399       1        3   -0.1748
-    ## 136       1        3   -0.1818
-    ## 181       1        3   -0.1820
-    ## 44        1        3   -0.1821
-    ## 256       1        3   -0.2087
-    ## 345       1        3   -0.2343
-    ## 180       1        3   -0.2425
-    ## 125       1        3   -0.2531
-    ## 185       1        3   -0.2541
-    ## 319       1        3   -0.2567
-    ## 301       1        3   -0.2983
+    ##     cluster neighbor   sil_width
+    ## 270       1        3 -0.02860021
+    ## 372       1        3 -0.03256010
+    ## 86        1        3 -0.09890075
+    ## 2         1        3 -0.16357652
+    ## 399       1        3 -0.17478573
+    ## 136       1        3 -0.18182697
+    ## 181       1        3 -0.18195141
+    ## 44        1        3 -0.18211402
+    ## 256       1        3 -0.20867157
+    ## 345       1        3 -0.23434423
+    ## 180       1        3 -0.24250913
+    ## 125       1        3 -0.25309974
+    ## 185       1        3 -0.25408195
+    ## 319       1        3 -0.25670097
+    ## 301       1        3 -0.29831181
 
-### Compare Clustering
-
-``` r
-## Prepare a bidimensional map
-  projectedData = cmdscale(dfClus_D, k=2)
-
-  # save coordinates to original data frame
-  dat$dim1 = projectedData[,1]
-  dat$dim2 = projectedData[,2]
-  
-## See the Map
-  base= ggplot(data=dat,
-             aes(x=dim1, y=dim2,
-                 label=SchoolName)) 
-  base + geom_text(size=2)
-```
-
-![](PubPol542_Group1_Clustering_files/figure-gfm/Compare%20Clustering-1.png)<!-- -->
-
-``` r
-## Plot results from PAM:
-  pamPlot=base + labs(title = "PAM") + geom_point(size=2, aes(color=pam), show.legend = F)
-  
-## Plot results from Hierarchical AGNES:
-  agnPlot=base + labs(title = "AGNES") + geom_point(size=2, aes(color=agn), show.legend = F)
-  
-## Plot results from Hierarchical DIANA:
-  diaPlot=base + labs(title = "DIANA") + geom_point(size=2, aes(color=dia), show.legend = F)
-  
-## Compare visually
-  library(ggpubr)
-```
-
-    ## Warning: package 'ggpubr' was built under R version 3.6.2
-
-``` r
-  ggarrange(pamPlot, agnPlot, diaPlot,ncol = 3) # Hierarchizing (divisive) is the most appropriate clustering approach
-```
-
-![](PubPol542_Group1_Clustering_files/figure-gfm/Compare%20Clustering-2.png)<!-- -->
-
-**Hierarchizing (divisive) is the most appropriate clustering
-approach.**
+There are 15 rows with negative silhouettes, which is okay.
